@@ -1,8 +1,8 @@
 # BETTERMANN patrick
-    numero etudiant: 
-    patrick.bettermann@gmx.de  
+    Numero Etudiant : 
+    Email: patrick.bettermann@gmx.de  
 
 # ALI OMAR ismail  
-    numero etudiant: 22017501 
-    liamsi2019@gmail.com  
+    Numero Etudiant: 22017501 
+    Email: liamsi2019@gmail.com  
 
