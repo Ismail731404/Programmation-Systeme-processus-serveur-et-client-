@@ -9,23 +9,6 @@
 
 
 
-
-
-union Data{
-	int i;
-	double d;
-	lpc_string s;
-};
-
-
-typedef struct {
-	pthread_mutex_t mutex;
-	pthread_cond_t rcond;
-	pthread_cond_t wcond;
-	pid_t pid;
-
-} lpc_memory;
-
 void *lpc_open(const char *name){
 	int fd = shm_open(name, O_RDWR, S_IRUSR | S_IWUSR);
 	if(fd == -1){
@@ -52,11 +35,8 @@ void *lpc_open(const char *name){
 
 int lpc_close(void *mem){
 
-	//struct stat bufStat;
-	//fstat(, &bufStat);
-	//printf("unmap: longeur object %d\n",
-	//	(int) bufStat.st_size);
 	int result = munmap(mem, 1024);
+	
 	return result;
 }
 
@@ -75,6 +55,15 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	int nop = 1;
 	int count = 0;
 
+	int code;
+	lpc_memory *mem = (lpc_memory*) memory;
+
+	if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
+		printf("error: pthread_mutex_lock\n");
+	}
+	printf("acquired mutex\n");
+
+	union Data arr[7];
 	while(nop != 0){
 		
 		data = malloc(sizeof(union Data));
@@ -82,41 +71,58 @@ int lpc_call(void *memory, const char *fun_name, ...){
 
 		switch(fst_param){
 			case STRING:
-				string_param = (lpc_string*) va_arg (arguments, lpc_string*);
-				data->s = *string_param;		
+				//string_param = (lpc_string*) va_arg (arguments, lpc_string*);
+				//data->s = *string_param;		
 				printf("string_param string: %s\n", string_param->string);
 				printf("string_param slen: %d\n", string_param->slen);	
-				memcpy((union Data*) memory+count, 
-						string_param,
-					       	sizeof(lpc_string)+string_param->slen);
-				count ++;		
+				//memcpy((union Data*) memory+count+sizeof(header), 
+				//		string_param,
+				//	    sizeof(lpc_string)+string_param->slen);
+				//arr[count] = *string_param;
+				//count ++;		
 				break;
 
 			case DOUBLE:
-				double_param = (double*) va_arg (arguments, double*);
-				data->d = *double_param;
-				memcpy((union Data*) memory+count, double_param, sizeof(union Data));
-				count ++;
+				//double_param = (double*) va_arg (arguments, double*);
+				//data->d = *double_param;
+				//memcpy((union Data*) memory+count+sizeof(header),
+				//	data, 
+				//	sizeof(union Data));	
+				//arr[count] = *data;
+				//ount ++;
 				break;
 
 			case INT:
-
 				int_param = (int*) va_arg (arguments, int*);
 				data->i = *int_param;
-				memcpy((union Data*) memory+count, int_param, sizeof(union Data));	
+				//memcpy((union Data*) memory+count+sizeof(header),
+				//	data,
+				//	sizeof(union Data));	
+				arr[count] = *data;
 				count ++;
 				break;
 
 			case NOP:
 				nop = 0;
+				memcpy(mem->data_entries, arr, sizeof(arr));
 				break;
 
 			default:
 				printf("could not read arguments\n");
 				return -1;
 		}
-
 	}
+	//make condition come true
+	mem->hd.libre = 0;
+
+    if((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0){
+		printf("error: pthread_mutex_unlock\n");
+	}
+	printf("released mutex\n");
+	if((code = pthread_cond_signal(&mem->hd.wcond)) != 0){
+		printf("error: pthread_cond_signal wcond\n");
+	}
+	printf("notified server\n");
 
 	va_end(arguments);
 	return 1;
@@ -183,19 +189,21 @@ int main(int argc, char *argv[]){
 	
 
 	//client
-	void *mem = lpc_open("test");
+	lpc_memory *mem = lpc_open("test");
 	
 	int a = 1;
-	int b = 2;
-	double c = 3;
-	double d = 4;
-	lpc_string *s = lpc_make_string("bonjour", 100);
-	lpc_string *s1 = lpc_make_string("hi1", 100);
-	lpc_string *s2 = lpc_make_string("hi3", 100);
+	//int b = 2;
+	//double c = 3;
+	//double d = 4;
+	//lpc_string *s = lpc_make_string("bonjour", 100);
+	//lpc_string *s1 = lpc_make_string("hi1", 100);
+	//lpc_string *s2 = lpc_make_string("hi3", 100);
 	//printf("size: %ld\n", sizeof(union Data));
 	//printf("size s: %ld\n", sizeof(*s));
 	//int r = lpc_call(mem, "fun_difficile", STRING, s, NOP);
-	int r = lpc_call(mem, "fun_difficile", INT, &a, DOUBLE, &c, INT, &b, STRING, s, DOUBLE, &d, NOP);
+	//int r = lpc_call(mem, "fun_difficile", INT, &a, DOUBLE, &c, INT, &b, DOUBLE, &d, NOP);
+	lpc_call(mem, "fun_difficile", INT, &a, NOP);
+
 	
 	printf("%d\n", lpc_close(mem));
 	return 0;
