@@ -10,17 +10,22 @@ all : $(EXEC1) $(EXEC2)
 
 $(warning default goal is $(.DEFAULT_GOAL))
 
-
-src/client/lpc_client.o : src/client/lpc_client.c
+build/init_memory.o : include/Memoire/init_memory.c  include/Memoire/init_memory.h
 	$(CC) $(CFLAGS)  -o $@ -c $< $(LDLIBS)
 
-src/server/lpc_server.o : src/server/lpc_server.c
+build/init_mutex.o: include/MutexCond/init_mutex.c  include/MutexCond/init_mutex.h
+	$(CC) $(CFLAGS)  -o $@ -c $< $(LDLIBS)
+
+build/lpc_client.o : src/client/lpc_client.c
+	$(CC) $(CFLAGS)  -o $@ -c $< $(LDLIBS)
+
+build/lpc_server.o : src/server/lpc_server.c
 	$(CC) $(CFLAGS)  -o $@ -c $< $(LDLIBS)
 	
-$(EXEC1) : src/server/lpc_server.o
+$(EXEC1) : build/lpc_server.o build/init_memory.o  build/init_mutex.o
 	$(CC) $(CFLAGS)  -o $@ $^ $(LDLIBS)
 	
-$(EXEC2) : src/client/lpc_client.o
+$(EXEC2) : build/lpc_client.o
 	$(CC) $(CFLAGS)  -o $@ $^ $(LDLIBS) 
 	
 	
@@ -28,4 +33,4 @@ $(EXEC2) : src/client/lpc_client.o
 #.DEFAULT_GOAL :=
 	
 clean:
-	rm -rf src/client/*.o  src/server/*.o 
+	rm -rf build/*.o  build/*.o 

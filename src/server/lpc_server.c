@@ -8,81 +8,7 @@
 #include "../../include/lpc_panic.h"
 
 
-
-int initialiser_mutex(pthread_mutex_t *pmutex){
-        pthread_mutexattr_t mutexattr;
-        int code;
-        if((code = pthread_mutexattr_init(&mutexattr)) != 0)
-                return code;
-        if((code = pthread_mutexattr_setpshared(&mutexattr,
-                                        PTHREAD_PROCESS_SHARED)) != 0)
-                return code;
-        code = pthread_mutex_init(pmutex, &mutexattr);
-        return code;
-}
-
-
-int initialiser_cond(pthread_cond_t *pcond){
-        pthread_condattr_t condattr;
-        int code;
-        if(( code = pthread_condattr_init(&condattr)) != 0)
-                return code;
-        if(( code = pthread_condattr_setpshared(&condattr,PTHREAD_PROCESS_SHARED)) != 0)
-                return code;
-        code = pthread_cond_init(pcond, &condattr) ;
-        return code;
-}
-
-
-void *init_shared_memory(const char *name){
-
-        int fd = shm_open(name, O_CREAT | O_RDWR,
-                        S_IRUSR | S_IWUSR);
-        if(fd == -1){
-                printf("fd shm\n");
-                return NULL;
-        }
-
-        if(ftruncate(fd, 1024) == -1){
-                printf("ftruncate\n");
-                return NULL;
-        }
-
-        struct stat bufStat;
-        fstat(fd, &bufStat);
-        printf("map: longeur object %d\n",
-                (int) bufStat.st_size);
-
-        lpc_memory *mem = mmap(NULL, bufStat.st_size,
-                        PROT_READ | PROT_WRITE,
-                        MAP_SHARED, fd, 0);
-
-        if(mem == MAP_FAILED){
-                printf("mmap\n");
-                exit(0);
-        }
-
-
-        //initialise memory
-        mem->hd.libre = 1;
-        int code;
-        code = initialiser_mutex(&mem->hd.mutex);
-        if( code != 0 ){
-                PANIC_EXIT("mutex\n");
-                printf("error: init mutex\n");
-        }
-        code = initialiser_cond(&mem->hd.rcond);
-        if( code != 0 ){
-                PANIC_EXIT("rcond\n");
-                printf("error: init rcond\n");
-        }
-        code = initialiser_cond(&mem->hd.wcond);
-        if( code != 0 ){
-                PANIC_EXIT("wcond\n");
-                printf("error: init wcond\n");
-        }
-        return  mem;
-}
+#include "../../include/Memoire/init_memory.h"
 
 
 void *lpc_open(const char *name){
@@ -121,7 +47,7 @@ int lpc_close(void *mem){
 int main(int argc, char *argv[]){
 
 	//create shared memory object
-        lpc_memory *mem = init_shared_memory("test");	
+        lpc_memory *mem = init_memory("/test");	
 	
         int code; 
         
