@@ -39,7 +39,8 @@ void *init_memory(const char *mem_objet)
 
   //initialiser la mémoire
   int code;
-  mem->hd.libre = 1; /* memoire est libre initialement*/
+  mem->hd.libre = 1;            /* memoire est libre initialement*/
+  mem->hd.length_arr[0] = 0;    //offset for first data entry
 
   code = initialiser_mutex(&mem->hd.mutex);
   if (code != 0)

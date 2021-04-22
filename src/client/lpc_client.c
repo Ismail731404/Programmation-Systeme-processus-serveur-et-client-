@@ -47,13 +47,23 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	va_start(arguments, fun_name);
 
 	lpc_type fst_param;
+
 	lpc_string *string_param;
 	double *double_param;
 	int *int_param;
 	
-	union Data *data;
-	int nop = 1;
-	int count = 0;
+	void *ptr = memory;
+	ptr = (void *) ((char *) memory + sizeof(header)); 
+
+	/* cast to char* necessary to move pointer, then back to void*   */
+
+	int offset = 0; 	//offset to start of data segment in each iteration
+
+	int type;			//type of data entry
+	int size;			//length in bytes of data entry
+
+	int nop = 1;		//end of function parameters
+	int count = 0;		//counter of data entries
 
 	int code;
 	lpc_memory *mem = (lpc_memory*) memory;
@@ -63,48 +73,58 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	}
 	printf("acquired mutex\n");
 
-	union Data arr[7];
 	while(nop != 0){
 		
-		data = malloc(sizeof(union Data));
 		fst_param = (lpc_type) va_arg (arguments, lpc_type);
+		
+
+		/*calculate offset depending on the length of data 
+		already in the shared  */
+
+		offset = 0; 
+		for(int i=0; i<count; i++){
+			offset += mem->hd.length_arr[i];
+		}
 
 		switch(fst_param){
 			case STRING:
-				//string_param = (lpc_string*) va_arg (arguments, lpc_string*);
-				//data->s = *string_param;		
-				printf("string_param string: %s\n", string_param->string);
-				printf("string_param slen: %d\n", string_param->slen);	
-				//memcpy((union Data*) memory+count+sizeof(header), 
-				//		string_param,
-				//	    sizeof(lpc_string)+string_param->slen);
-				//arr[count] = *string_param;
-				//count ++;		
+				string_param = (lpc_string*) va_arg (arguments, lpc_string*);
+				type = 3;		// 3: lpc_string
+				size = sizeof(lpc_string) + string_param->slen;
+
+				memcpy((char *)ptr + offset, string_param, size);
+
+				mem->hd.types[count] = type; 
+				mem->hd.length_arr[count] = size;
+				count ++;		
 				break;
 
 			case DOUBLE:
-				//double_param = (double*) va_arg (arguments, double*);
-				//data->d = *double_param;
-				//memcpy((union Data*) memory+count+sizeof(header),
-				//	data, 
-				//	sizeof(union Data));	
-				//arr[count] = *data;
-				//ount ++;
+				double_param = (double*) va_arg (arguments, double*);
+				type = 2;		//2: double
+				size = sizeof(double);
+			
+				memcpy(((char *)ptr + offset), double_param, size);
+	
+				mem->hd.types[count] = type; 
+				mem->hd.length_arr[count] = size;
+				count ++;
 				break;
 
 			case INT:
 				int_param = (int*) va_arg (arguments, int*);
-				data->i = *int_param;
-				//memcpy((union Data*) memory+count+sizeof(header),
-				//	data,
-				//	sizeof(union Data));	
-				arr[count] = *data;
+				type = 1;		//1: int
+				size = sizeof(int);
+
+				memcpy(((char *)ptr + offset), int_param, size);
+	
+				mem->hd.types[count] = type; 
+				mem->hd.length_arr[count] = size;
 				count ++;
 				break;
 
 			case NOP:
 				nop = 0;
-				memcpy(mem->data_entries, arr, sizeof(arr));
 				break;
 
 			default:
@@ -191,18 +211,18 @@ int main(int argc, char *argv[]){
 	//client
 	lpc_memory *mem = lpc_open("test");
 	
-	int a = 1;
-	//int b = 2;
+	//int a = 1;
+	int b = 2;
 	//double c = 3;
-	//double d = 4;
-	//lpc_string *s = lpc_make_string("bonjour", 100);
-	//lpc_string *s1 = lpc_make_string("hi1", 100);
+	double d = 4;
+	lpc_string *s = lpc_make_string("bonjour", 100);
+	lpc_string *s1 = lpc_make_string("hi1", 100);
 	//lpc_string *s2 = lpc_make_string("hi3", 100);
 	//printf("size: %ld\n", sizeof(union Data));
 	//printf("size s: %ld\n", sizeof(*s));
 	//int r = lpc_call(mem, "fun_difficile", STRING, s, NOP);
 	//int r = lpc_call(mem, "fun_difficile", INT, &a, DOUBLE, &c, INT, &b, DOUBLE, &d, NOP);
-	lpc_call(mem, "fun_difficile", INT, &a, NOP);
+	lpc_call(mem, "fun_difficile", INT, &b, STRING, s,  DOUBLE, &d, STRING, s1, NOP);
 
 	
 	printf("%d\n", lpc_close(mem));

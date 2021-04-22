@@ -47,7 +47,8 @@ int lpc_close(void *mem){
 int main(int argc, char *argv[]){
 
 	//create shared memory object
-        lpc_memory *mem = init_memory("/test");	
+        void *memory = init_memory("/test");
+        lpc_memory *mem = memory;	
 	
         int code; 
         
@@ -63,11 +64,15 @@ int main(int argc, char *argv[]){
                         printf("error: pthread_cond_wait\n");
                 }
         }
-        union Data *ptr = mem+sizeof(header);
         printf("received notification from client\n");
-        printf("%d\n", mem->data_entries[0].i);
-        //ptr++;
-        //printf("%d\n", ptr->i);
+        void *ptr = memory;
+	ptr = (void *) ((char *) memory + sizeof(header));
+        
+        printf("%d: %d\n", mem->hd.types[0], *(int *) ptr);
+        printf("%d: %s\n", mem->hd.types[1], ((lpc_string *) ((char *) (ptr + mem->hd.length_arr[0])))->string);
+        printf("%d: %f\n", mem->hd.types[2], *(double *) ((char *) (ptr + mem->hd.length_arr[0]+mem->hd.length_arr[1])));
+        printf("%d: %s\n", mem->hd.types[3], ((lpc_string *) ((char *) (ptr + mem->hd.length_arr[0]+mem->hd.length_arr[1]+mem->hd.length_arr[2])))->string);
+        
 
         //unlock mutex
         printf("acquired mutex and received signal\n");

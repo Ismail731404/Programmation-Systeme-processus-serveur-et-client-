@@ -14,13 +14,6 @@ typedef struct {
 } lpc_string;
 
 
-union Data{
-	int i;
-	double d;
-	lpc_string s;
-};
-
-
 typedef struct {
         pthread_mutex_t mutex;
         pthread_cond_t rcond;
@@ -28,11 +21,15 @@ typedef struct {
         pid_t pid;
         unsigned char libre;
         int return_v;
-        int err;
+        int err;        
+        int types[20];           //stores order and type of data in the shared memory
+                                 //1:int, 2:Double, 3:lpc_string
+        int length_arr[20];      //stores the length in bytes of each entry
+                                 //example: [sizeof(int), sizeof(double), sizeof(lpc_string)+slen, ...]
 } header;
 
 
 typedef struct {
         header hd;
-        union Data data_entries[7];
+        void *data;
 } lpc_memory;

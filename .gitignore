@@ -6,4 +6,4 @@
 
 # fichier .o
 *.o
-
+*.vscode
