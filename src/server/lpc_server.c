@@ -68,10 +68,23 @@ int main(int argc, char *argv[]){
         void *ptr = memory;
 	ptr = (void *) ((char *) memory + sizeof(header));
         
-        printf("%d: %d\n", mem->hd.types[0], *(int *) ptr);
-        printf("%d: %s\n", mem->hd.types[1], ((lpc_string *) ((char *) (ptr + mem->hd.length_arr[0])))->string);
-        printf("%d: %f\n", mem->hd.types[2], *(double *) ((char *) (ptr + mem->hd.length_arr[0]+mem->hd.length_arr[1])));
-        printf("%d: %s\n", mem->hd.types[3], ((lpc_string *) ((char *) (ptr + mem->hd.length_arr[0]+mem->hd.length_arr[1]+mem->hd.length_arr[2])))->string);
+        for(int i=0;i<4;i++)
+	{
+		switch(mem->hd.types[i]){
+			case 1:
+                                printf("%d: %d\n", mem->hd.types[i], *((int *) ((char *) ptr+mem->hd.offsets[i])));
+                                *((int *) ((char *) ptr+mem->hd.offsets[i]))+=1;	
+				break;
+			case 2:
+                                 printf("%d: %f\n", mem->hd.types[i], *((double *) ((char *) ptr+mem->hd.offsets[i])));
+                                 *((double *) ((char *) ptr+mem->hd.offsets[i]))+=1;
+                                 break;
+			case 3: 
+                                 printf("%d: %s\n", mem->hd.types[i], ((lpc_string *) ((char *) ptr+mem->hd.offsets[i]))->string);
+                                 break;               
+
+		}
+	}
         
 
         //unlock mutex

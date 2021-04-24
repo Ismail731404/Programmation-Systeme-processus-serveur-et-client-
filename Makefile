@@ -33,4 +33,4 @@ $(EXEC2) : build/lpc_client.o
 #.DEFAULT_GOAL :=
 	
 clean:
-	rm -rf build/*.o  build/*.o 
+	rm -rf build/*
