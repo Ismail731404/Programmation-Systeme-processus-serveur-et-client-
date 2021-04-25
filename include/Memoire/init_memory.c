@@ -16,7 +16,7 @@ void *init_memory(const char *mem_objet)
 {
   //int creation = 0;
 
-  char *shm_name = mem_objet;
+  const char *shm_name = mem_objet;
 
   /* supprimer l'objet mémoire avant de le récréer */
   shm_unlink(shm_name);

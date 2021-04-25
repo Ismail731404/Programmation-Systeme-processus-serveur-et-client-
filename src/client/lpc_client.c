@@ -96,6 +96,8 @@ int lpc_call(void *memory, const char *fun_name, ...){
 
 				mem->hd.types[count] = type; 
 				mem->hd.length_arr[count] = size;
+				mem->hd.address[count]= (lpc_string*) string_param;
+				mem->hd.offsets[count]=offset;
 				count ++;		
 				break;
 
@@ -108,6 +110,8 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	
 				mem->hd.types[count] = type; 
 				mem->hd.length_arr[count] = size;
+				mem->hd.address[count]= (double*) double_param;
+				mem->hd.offsets[count]=offset;
 				count ++;
 				break;
 
@@ -120,6 +124,8 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	
 				mem->hd.types[count] = type; 
 				mem->hd.length_arr[count] = size;
+				mem->hd.address[count]= (int*) int_param;
+				mem->hd.offsets[count]=offset;
 				count ++;
 				break;
 
@@ -144,6 +150,31 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	}
 	printf("notified server\n");
 
+
+	//il va essaie de revoureille et il pourra pas car c'est le serveur qui a verroue avant lui
+	    // le but c'est just qu'il va attendre le reponse du serveur
+	if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
+		printf("error: pthread_mutex_lock\n");
+	}
+
+	if((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0){
+		printf("error: pthread_mutex_unlock\n");
+	}
+
+    
+    
+	//recuper les changement du serveur
+	for(int i=0;i<count;i++)
+	{
+		switch(mem->hd.types[i]){
+			case 1:
+				*(int *) (mem->hd.address[i])=*((int *) ((char *) ptr+mem->hd.offsets[i]))+=1;;	
+				break;
+			case 2:
+			     *(double *) (mem->hd.address[i])=*((double *) ((char *) ptr+mem->hd.offsets[i]));
+
+		}
+	}
 	va_end(arguments);
 	return 1;
 }
@@ -195,7 +226,7 @@ lpc_string *lpc_make_string(const char *s, int taille){
 int main(int argc, char *argv[]){
 	
 	// serveur
-	int fd = shm_open("test", O_CREAT | O_RDWR, 
+	int fd = shm_open("/test", O_CREAT | O_RDWR, 
 			S_IRUSR | S_IWUSR);
 	if(fd == -1){
 		printf("fd shm\n");
@@ -209,7 +240,7 @@ int main(int argc, char *argv[]){
 	
 
 	//client
-	lpc_memory *mem = lpc_open("test");
+	lpc_memory *mem = lpc_open("/test");
 	
 	//int a = 1;
 	int b = 2;
@@ -222,9 +253,10 @@ int main(int argc, char *argv[]){
 	//printf("size s: %ld\n", sizeof(*s));
 	//int r = lpc_call(mem, "fun_difficile", STRING, s, NOP);
 	//int r = lpc_call(mem, "fun_difficile", INT, &a, DOUBLE, &c, INT, &b, DOUBLE, &d, NOP);
-	lpc_call(mem, "fun_difficile", INT, &b, STRING, s,  DOUBLE, &d, STRING, s1, NOP);
-
-	
+	//lpc_call(mem, "fun_difficile", INT, &b, STRING, s,  DOUBLE, &d, STRING, s1, NOP);
+    lpc_call(mem, "fun_difficile", INT, &b,DOUBLE, &d, NOP);
+	printf("La valeur de b est modife par le server b=%d\n",b);
+	printf("La valeur de d est modife par le server d=%f\n",d);
 	printf("%d\n", lpc_close(mem));
 	return 0;
 }

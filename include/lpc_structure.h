@@ -26,6 +26,11 @@ typedef struct {
                                  //1:int, 2:Double, 3:lpc_string
         int length_arr[20];      //stores the length in bytes of each entry
                                  //example: [sizeof(int), sizeof(double), sizeof(lpc_string)+slen, ...]
+        int offsets[20];         //decalage des different donne
+        
+        void *address[20];       // stocke les addresse des donnes envoyer par le client
+                                        //pour mettre a jour une fois le client fini son travailler
+
 } header;
 
 
