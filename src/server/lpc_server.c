@@ -120,6 +120,10 @@ int main(int argc, char *argv[]){
         }
         printf("released mutex\n");
 
+        if((code = pthread_cond_signal(&mem->hd.rcond)) != 0){
+                printf("error: pthread_cond_signal wcond\n");
+        }
+        
 	lpc_close(mem);
 
 	return 0;

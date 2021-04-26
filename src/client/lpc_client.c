@@ -154,28 +154,30 @@ int lpc_call(void *memory, const char *fun_name, ...){
 
 
 	//il va essaie de revoureille et il pourra pas car c'est le serveur qui a verroue avant lui
-	    // le but c'est just qu'il va attendre le reponse du serveur
-	if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
-		printf("error: pthread_mutex_lock\n");
-	}
+        // le but c'est just qu'il va attendre le reponse du serveur
+    if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
+        printf("error: pthread_mutex_lock\n");
+    }
 
-	if((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0){
-		printf("error: pthread_mutex_unlock\n");
-	}
+    if((code = pthread_cond_wait(&mem->hd.rcond, &mem->hd.mutex)) != 0){
+        printf("error: pthread_cond_wait\n");
+    }
 
+    if((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0){
+        printf("error: pthread_mutex_unlock\n");
+    }
     
     
 	//recuper les changement du serveur
 	for(int i=0;i<count;i++)
 	{
 		switch(mem->hd.types[i]){
-			case 1:
-																		//pourquoi += 1 chez le client?
-				*(int *) (mem->hd.address[i])=*((int *) ((char *) ptr+mem->hd.offsets[i]))+=1;;	
+			case 1:												
+				*(int *) (mem->hd.address[i])=*((int *) ((char *) ptr+mem->hd.offsets[i]));	
 				break;
 			case 2:
 			     *(double *) (mem->hd.address[i])=*((double *) ((char *) ptr+mem->hd.offsets[i]));
-
+		
 		}
 	}
 	va_end(arguments);
@@ -227,21 +229,6 @@ lpc_string *lpc_make_string(const char *s, int taille){
 
 
 int main(int argc, char *argv[]){
-	
-	// pas nécessaire! -> lpc_open
-	/* serveur
-	int fd = shm_open("/test", O_CREAT | O_RDWR, 
-			S_IRUSR | S_IWUSR);
-	if(fd == -1){
-		printf("fd shm\n");
-		return -1;
-	}
-
-	if(ftruncate(fd, 1024) == -1){
-		printf("ftruncate\n");
-		return -1;
-	}
-	*/
 
 	//client
 	lpc_memory *mem = lpc_open("/test");
