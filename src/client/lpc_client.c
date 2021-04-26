@@ -68,6 +68,8 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	int code;
 	lpc_memory *mem = (lpc_memory*) memory;
 
+	strcpy(mem->hd.fun_name, fun_name);		//set fun_name in lpc_memory HEAD
+
 	if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
 		printf("error: pthread_mutex_lock\n");
 	}
@@ -168,6 +170,7 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	{
 		switch(mem->hd.types[i]){
 			case 1:
+																		//pourquoi += 1 chez le client?
 				*(int *) (mem->hd.address[i])=*((int *) ((char *) ptr+mem->hd.offsets[i]))+=1;;	
 				break;
 			case 2:
@@ -225,7 +228,8 @@ lpc_string *lpc_make_string(const char *s, int taille){
 
 int main(int argc, char *argv[]){
 	
-	// serveur
+	// pas nécessaire! -> lpc_open
+	/* serveur
 	int fd = shm_open("/test", O_CREAT | O_RDWR, 
 			S_IRUSR | S_IWUSR);
 	if(fd == -1){
@@ -237,7 +241,7 @@ int main(int argc, char *argv[]){
 		printf("ftruncate\n");
 		return -1;
 	}
-	
+	*/
 
 	//client
 	lpc_memory *mem = lpc_open("/test");
@@ -258,5 +262,7 @@ int main(int argc, char *argv[]){
 	printf("La valeur de b est modife par le server b=%d\n",b);
 	printf("La valeur de d est modife par le server d=%f\n",d);
 	printf("%d\n", lpc_close(mem));
+	free(s);
+	free(s1);
 	return 0;
 }

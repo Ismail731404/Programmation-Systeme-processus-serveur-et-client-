@@ -43,13 +43,37 @@ int lpc_close(void *mem){
 }
 
 
+/* function that takes a name and a lpc_fun list 
+returns a function pointer to a function that takes void* and returns int
+-> finds server function corresponding to name */
+
+int (*find_fun(char *name, lpc_function fun_list[20])) (void*){
+
+        for(int i=0; i<20; i++){
+                if(strcmp(name, fun_list[i].fun_name) == 0){
+                        return fun_list[i].fun;
+                }
+        }
+
+        return NULL;
+}
+
+
+
+
+
 
 int main(int argc, char *argv[]){
 
 	//create shared memory object
         void *memory = init_memory("/test");
         lpc_memory *mem = memory;	
+
+        //array that contains all executable functions of the server
+        lpc_function function_list [20];                
 	
+        //TODO: init function_list
+
         int code; 
         
         //lock mutex
@@ -67,6 +91,8 @@ int main(int argc, char *argv[]){
         printf("received notification from client\n");
         void *ptr = memory;
 	ptr = (void *) ((char *) memory + sizeof(header));
+
+        printf("%s\n", mem->hd.fun_name);
         
         for(int i=0;i<4;i++)
 	{
