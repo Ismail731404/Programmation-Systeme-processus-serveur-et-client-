@@ -35,17 +35,32 @@ void *lpc_open(const char *name){
 
 int lpc_close(void *mem){
 
-	int result = munmap(mem, 1024);
+	int result = munmap(mem, sizeof(mem));
 	
 	return result;
 }
 
+void lpc_attendre_signal(lpc_memory *mem){
+    int code;
+
+	if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
+		printf("error: pthread_mutex_lock\n");
+	}
+	if((code = pthread_cond_wait(&mem->hd.rcond, &mem->hd.mutex)) != 0){
+        printf("error: pthread_cond_wait\n");
+    }
+	if((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0){
+		printf("error: pthread_mutex_unlock\n");
+	}
+}
 
 int lpc_call(void *memory, const char *fun_name, ...){
-	
+
+
+	 printf("clinet : je vais envoyer cette fonction %s\n",fun_name);
 	va_list arguments;
 	va_start(arguments, fun_name);
-
+    
 	lpc_type fst_param;
 
 	lpc_string *string_param;
@@ -67,12 +82,13 @@ int lpc_call(void *memory, const char *fun_name, ...){
 
 	int code;
 	lpc_memory *mem = (lpc_memory*) memory;
+	
 
 	if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
 		printf("error: pthread_mutex_lock\n");
 	}
 	printf("acquired mutex\n");
-
+     memcpy(mem->hd.fun_name, fun_name,sizeof(fun_name));
 	while(nop != 0){
 		
 		fst_param = (lpc_type) va_arg (arguments, lpc_type);
@@ -153,13 +169,8 @@ int lpc_call(void *memory, const char *fun_name, ...){
 
 	//il va essaie de revoureille et il pourra pas car c'est le serveur qui a verroue avant lui
 	    // le but c'est just qu'il va attendre le reponse du serveur
-	if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
-		printf("error: pthread_mutex_lock\n");
-	}
 
-	if((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0){
-		printf("error: pthread_mutex_unlock\n");
-	}
+	lpc_attendre_signal(mem);
 
     
     
@@ -168,7 +179,7 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	{
 		switch(mem->hd.types[i]){
 			case 1:
-				*(int *) (mem->hd.address[i])=*((int *) ((char *) ptr+mem->hd.offsets[i]))+=1;;	
+				*(int *) (mem->hd.address[i])=*((int *) ((char *) ptr+mem->hd.offsets[i]));	
 				break;
 			case 2:
 			     *(double *) (mem->hd.address[i])=*((double *) ((char *) ptr+mem->hd.offsets[i]));
@@ -225,22 +236,15 @@ lpc_string *lpc_make_string(const char *s, int taille){
 
 int main(int argc, char *argv[]){
 	
-	// serveur
-	int fd = shm_open("/test", O_CREAT | O_RDWR, 
-			S_IRUSR | S_IWUSR);
-	if(fd == -1){
-		printf("fd shm\n");
-		return -1;
-	}
-
-	if(ftruncate(fd, 1024) == -1){
-		printf("ftruncate\n");
-		return -1;
-	}
-	
+  if (argc != 2)
+  {
+    fprintf(stderr, "usage : %s shared_memory_object\n", argv[0]);
+    exit(1);
+  }
 
 	//client
-	lpc_memory *mem = lpc_open("/test");
+	lpc_memory *mem = lpc_open("/shmo_name");
+	char shmo_name_Pid[20];
 	
 	//int a = 1;
 	int b = 2;
@@ -248,15 +252,43 @@ int main(int argc, char *argv[]){
 	double d = 4;
 	lpc_string *s = lpc_make_string("bonjour", 100);
 	lpc_string *s1 = lpc_make_string("hi1", 100);
-	//lpc_string *s2 = lpc_make_string("hi3", 100);
-	//printf("size: %ld\n", sizeof(union Data));
-	//printf("size s: %ld\n", sizeof(*s));
-	//int r = lpc_call(mem, "fun_difficile", STRING, s, NOP);
-	//int r = lpc_call(mem, "fun_difficile", INT, &a, DOUBLE, &c, INT, &b, DOUBLE, &d, NOP);
-	//lpc_call(mem, "fun_difficile", INT, &b, STRING, s,  DOUBLE, &d, STRING, s1, NOP);
-    lpc_call(mem, "fun_difficile", INT, &b,DOUBLE, &d, NOP);
+	const char *function;
+	function = malloc(sizeof(char)*20);
+	memcpy(function,argv[1],sizeof(argv[1]));
+	
+
+	//Avertir au serveur vouloir appeller une fonction
+	int code;
+	if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
+		printf("error: pthread_mutex_lock\n");
+	}
+	//envoyer au server son pid 
+	mem->hd.pid=getpid();
+	mem->hd.libre = 0;
+
+    if((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0){
+		printf("error: pthread_mutex_unlock\n");
+	}
+	printf("released mutex\n");
+	if((code = pthread_cond_signal(&mem->hd.wcond)) != 0){
+		printf("error: pthread_cond_signal wcond\n");
+	}
+	printf("notified server\n");
+
+    //Attendre la reponse du server
+	lpc_attendre_signal(mem);
+
+    //Recuperation la nouvelle Object a partage
+	memcpy(shmo_name_Pid,mem->hd.shmo_name_Pid,sizeof(mem->hd.shmo_name_Pid));
+
+	lpc_memory *memchild = lpc_open(shmo_name_Pid);
+
+    memchild->hd.pid=getpid();
+	
+    lpc_call(memchild,function, INT, &b,DOUBLE, &d, NOP);
 	printf("La valeur de b est modife par le server b=%d\n",b);
 	printf("La valeur de d est modife par le server d=%f\n",d);
 	printf("%d\n", lpc_close(mem));
+	lpc_close(memchild);
 	return 0;
 }
