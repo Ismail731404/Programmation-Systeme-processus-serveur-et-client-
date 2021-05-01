@@ -3,42 +3,11 @@
  * 
  * 
  ********************************************************/
-#include "../lib/lpc_utility.h"
+#include "../../include/lpc_utility.h"
 #include "../../include/lpc_panic.h"
 #include "../../include/lpc_structure.h"
+#include "../../include/lpc_functions/lpc_functions.h"
 
-
-
-void *lpc_open(const char *name){
-	int fd = shm_open(name, O_RDWR, S_IRUSR | S_IWUSR);
-	if(fd == -1){
-		printf("shm_open\n");
-		return NULL;
-	}
-
-	struct stat bufStat;
-	fstat(fd, &bufStat);
-	printf("map: longeur object %d\n",
-		(int) bufStat.st_size);
-
-	void *adr = mmap(NULL, bufStat.st_size,
-			PROT_READ | PROT_WRITE,
-			MAP_SHARED, fd, 0);
-
-	if(adr == MAP_FAILED)
-		PANIC_EXIT("mmap\n");
-		
-
-	return adr;
-}
-
-
-int lpc_close(void *mem){
-
-	int result = munmap(mem, 1024);
-	
-	return result;
-}
 
 
 int lpc_call(void *memory, const char *fun_name, ...){
@@ -153,6 +122,10 @@ int lpc_call(void *memory, const char *fun_name, ...){
 	printf("notified server\n");
 
 
+	//not yet perfect, needs rework!!
+	//!!
+	//!! ->
+
 	//il va essaie de revoureille et il pourra pas car c'est le serveur qui a verroue avant lui
         // le but c'est just qu'il va attendre le reponse du serveur
     if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
@@ -176,8 +149,11 @@ int lpc_call(void *memory, const char *fun_name, ...){
 				*(int *) (mem->hd.address[i])=*((int *) ((char *) ptr+mem->hd.offsets[i]));	
 				break;
 			case 2:
-			     *(double *) (mem->hd.address[i])=*((double *) ((char *) ptr+mem->hd.offsets[i]));
-		
+			    *(double *) (mem->hd.address[i])=*((double *) ((char *) ptr+mem->hd.offsets[i]));
+				break;
+			case 3: 
+    	        *(lpc_string *) (mem->hd.address[i])=*((lpc_string *) ((char *) ptr+mem->hd.offsets[i]));
+                break; 
 		}
 	}
 	va_end(arguments);
@@ -185,71 +161,30 @@ int lpc_call(void *memory, const char *fun_name, ...){
 }
 
 
-lpc_string *lpc_make_string(const char *s, int taille){
-	
-	lpc_string *lpc_s;
-
-	if(taille>0 && s==NULL){
-		lpc_s = malloc(taille + sizeof(lpc_string));
-		if(lpc_s==NULL){
-			printf("lpc_make_string: malloc\n");
-			return NULL;
-		}
-		lpc_s -> slen = taille;
-		memset(lpc_s -> string, '0', taille);
-	
-	}else if(taille<=0 && s!=NULL){
-		size_t lo = strlen(s) + 1;
-		lpc_s = malloc(lo + sizeof(lpc_string));
-		if(lpc_s == NULL){
-			printf("lpc_make_string: malloc\n");
-			return NULL;
-		}
-		lpc_s -> slen = lo;
-		strcpy(lpc_s -> string, s);
-
-	}else if(taille>=strlen(s)+1){
-		lpc_s = malloc(taille + sizeof(lpc_string));
-		if(lpc_s == NULL){
-			printf("lpc_make_string: malloc\n");
-			return NULL;
-		}
-		lpc_s -> slen = taille;
-		strcpy(lpc_s -> string, s);		
-
-	}else{
-		return NULL;
-
-	}
-
-	return lpc_s;
-
-}
-
-
-
 int main(int argc, char *argv[]){
 
 	//client
 	lpc_memory *mem = lpc_open("/test");
 	
-	//int a = 1;
+	int a = 1;
 	int b = 2;
 	//double c = 3;
 	double d = 4;
 	lpc_string *s = lpc_make_string("bonjour", 100);
-	lpc_string *s1 = lpc_make_string("hi1", 100);
-	//lpc_string *s2 = lpc_make_string("hi3", 100);
-	//printf("size: %ld\n", sizeof(union Data));
-	//printf("size s: %ld\n", sizeof(*s));
-	//int r = lpc_call(mem, "fun_difficile", STRING, s, NOP);
-	//int r = lpc_call(mem, "fun_difficile", INT, &a, DOUBLE, &c, INT, &b, DOUBLE, &d, NOP);
 	//lpc_call(mem, "fun_difficile", INT, &b, STRING, s,  DOUBLE, &d, STRING, s1, NOP);
-    lpc_call(mem, "fun_difficile", INT, &b,DOUBLE, &d, NOP);
-	printf("La valeur de b est modife par le server b=%d\n",b);
-	printf("La valeur de d est modife par le server d=%f\n",d);
+
+	/*
+    lpc_call(mem, "modify_lpc_string", STRING, s, NOP);
+	printf("Function returned: %d\n", mem->hd.return_v);
+	printf("La valeur de s est modife par le server s = %s\n",s->string);
+	*/
+	
+	lpc_call(mem, "add_int", INT, &a, INT, &b, NOP);
+	printf("Function returned: %d\n", mem->hd.return_v);
+	printf("La valeur de a+b est modife par le server a = %d\n", a);
+	
+	
 	printf("%d\n", lpc_close(mem));
-	free(s);
-	free(s1);
+
 	return 0;
 }
