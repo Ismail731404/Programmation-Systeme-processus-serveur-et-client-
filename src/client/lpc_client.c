@@ -140,7 +140,12 @@ int lpc_call(void *memory, const char *fun_name, ...){
         printf("error: pthread_mutex_unlock\n");
     }
     
-    
+
+	//only used when client sends a lpc_string to server
+
+    char *target_string;	//pointer to string given by client
+	char *origin_string;	//pointer to new string in shared memory, modified by server
+
 	//recuper les changement du serveur
 	for(int i=0;i<count;i++)
 	{
@@ -152,7 +157,9 @@ int lpc_call(void *memory, const char *fun_name, ...){
 			    *(double *) (mem->hd.address[i])=*((double *) ((char *) ptr+mem->hd.offsets[i]));
 				break;
 			case 3: 
-    	        *(lpc_string *) (mem->hd.address[i])=*((lpc_string *) ((char *) ptr+mem->hd.offsets[i]));
+				target_string = ((lpc_string *) (mem->hd.address[i]))->string;
+				origin_string = ((lpc_string *) ptr+mem->hd.offsets[i])->string;
+				memcpy(target_string, origin_string, mem->hd.length_arr[i]);
                 break; 
 		}
 	}
@@ -171,18 +178,19 @@ int main(int argc, char *argv[]){
 	//double c = 3;
 	double d = 4;
 	lpc_string *s = lpc_make_string("bonjour", 100);
-	//lpc_call(mem, "fun_difficile", INT, &b, STRING, s,  DOUBLE, &d, STRING, s1, NOP);
 
-	/*
+
+	//example 1: modify lpc_string, bonjour -> salut
     lpc_call(mem, "modify_lpc_string", STRING, s, NOP);
 	printf("Function returned: %d\n", mem->hd.return_v);
 	printf("La valeur de s est modife par le server s = %s\n",s->string);
-	*/
 	
+	/*
+	//example 2: addition of two int -> result of a+b in a
 	lpc_call(mem, "add_int", INT, &a, INT, &b, NOP);
 	printf("Function returned: %d\n", mem->hd.return_v);
 	printf("La valeur de a+b est modife par le server a = %d\n", a);
-	
+	*/
 	
 	printf("%d\n", lpc_close(mem));
 
