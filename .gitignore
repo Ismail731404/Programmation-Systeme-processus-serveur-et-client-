@@ -1,9 +1,2 @@
-
-# executable
-#server
-#client
-
-
-# fichier .o
 *.o
 *.vscode
