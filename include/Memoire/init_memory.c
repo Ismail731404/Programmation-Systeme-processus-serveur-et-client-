@@ -2,11 +2,9 @@
 #define _XOPEN_SOURCE 500
 #endif
 
-#include "../../src/lib/lpc_utility.h"
-#include "../lpc_structure.h"
-
-
 #include "memory.h"
+#include "../lpc_utility.h"
+#include "../lpc_structure.h"
 #include "../lpc_panic.h"
 #include "../MutexCond/init_mutex.h"
 

@@ -1,3 +1,5 @@
+#include "lpc_utility.h"
+
 typedef enum {STRING, DOUBLE, INT, NOP} lpc_type;
 
 

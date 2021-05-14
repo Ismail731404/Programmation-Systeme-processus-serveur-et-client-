@@ -3,11 +3,13 @@
  * 
  * 
  ********************************************************/
-#include "../lib/lpc_utility.h"
+#include "../../include/lpc_utility.h"
 #include "../../include/lpc_structure.h"
 #include "../../include/lpc_panic.h"
-
 #include "../../include/Memoire/init_memory.h"
+#include "../../include/lpc_functions/lpc_functions.h"
+#include "libfonctionsclient.h"
+
 
 void couleur(int c)
 {
@@ -45,60 +47,19 @@ void couleur(int c)
         }
 }
 
-void *lpc_open(const char *name)
-{
 
-        int fd = shm_open(name, O_RDWR, S_IRUSR | S_IWUSR);
-        if (fd == -1)
-        {
-                printf("shm_open\n");
-                return NULL;
-        }
-
-        struct stat bufStat;
-        fstat(fd, &bufStat);
-        printf("map: longeur object %d\n",
-               (int)bufStat.st_size);
-
-        void *adr = mmap(NULL, bufStat.st_size,
-                         PROT_READ | PROT_WRITE,
-                         MAP_SHARED, fd, 0);
-
-        if (adr == MAP_FAILED)
-                PANIC_EXIT("mmap\n");
-
-        return adr;
-}
-
-int lpc_close(void *mem)
-{
-
-        int result = munmap(mem, sizeof(mem));
-        return result;
-}
 
 /* function that takes a name and a lpc_fun list 
 returns a function pointer to a function that takes void* and returns int
 -> finds server function corresponding to name */
 
-int (*find_fun(char *name, lpc_function fun_list[20]))(void *)
-{
-
-        for (int i = 0; i < 20; i++)
-        {
-                if (strcmp(name, fun_list[i].fun_name) == 0)
-                {
+int (*find_fun(char *name, lpc_function fun_list[20])) (void*){
+        for(int i=0; i<20; i++){
+                if(strcmp(name, fun_list[i].fun_name) == 0){
                         return fun_list[i].fun;
                 }
         }
-
         return NULL;
-}
-
-int incrimente(void *a)
-{
-        sleep(30);
-        return 0;
 }
 
 void lpc_lock_wait(lpc_memory *mem)
@@ -121,13 +82,25 @@ void lpc_lock_wait(lpc_memory *mem)
         }
 }
 
+
+
+
 int main(int argc, char *argv[])
 {
 
         //array that contains all executable functions of the server
-        lpc_function tab[3];
-        strcpy(tab[1].fun_name, "incrimente");
-        tab[1].fun = incrimente;
+        lpc_function tab [20];   
+
+        //add client functions
+        lpc_function fun0 = {"add_int", &add_int};
+        function_list[0] = fun0;
+
+        lpc_function fun1 = {"print_lpc_string", &print_lpc_string};
+        function_list[1] = fun1;
+
+        lpc_function fun2 = {"modify_lpc_string", &modify_lpc_string};
+        function_list[2] = fun2;
+        
 
         //create shared memory object
         void *memory = init_memory("/shmo_name");
@@ -225,8 +198,9 @@ int main(int argc, char *argv[])
                         printf("error: pthread_cond_signal wcond\n");
                 }
         }
-        wait(NULL);
+
         lpc_close(MemorySimple);
+        src/server/lpc_server.c
 
         return 0;
 }

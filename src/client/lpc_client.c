@@ -3,41 +3,11 @@
  * 
  * 
  ********************************************************/
-#include "../lib/lpc_utility.h"
+#include "../../include/lpc_utility.h"
 #include "../../include/lpc_panic.h"
 #include "../../include/lpc_structure.h"
+#include "../../include/lpc_functions/lpc_functions.h"
 
-void *lpc_open(const char *name)
-{
-	int fd = shm_open(name, O_RDWR, S_IRUSR | S_IWUSR);
-	if (fd == -1)
-	{
-		printf("shm_open\n");
-		return NULL;
-	}
-
-	struct stat bufStat;
-	fstat(fd, &bufStat);
-	printf("Projection :Memoire taille(%d)\n",
-		   (int)bufStat.st_size);
-
-	void *adr = mmap(NULL, bufStat.st_size,
-					 PROT_READ | PROT_WRITE,
-					 MAP_SHARED, fd, 0);
-
-	if (adr == MAP_FAILED)
-		PANIC_EXIT("mmap\n");
-
-	return adr;
-}
-
-int lpc_close(void *mem)
-{
-
-	int result = munmap(mem, sizeof(mem));
-
-	return result;
-}
 
 void lpc_attendre_signal(lpc_memory *mem)
 {
@@ -175,7 +145,12 @@ int lpc_call(void *memory, const char *fun_name, ...)
 		printf("error: pthread_cond_signal wcond\n");
 	}
 
+	//not yet perfect, needs rework!!
+	//!!
+	//!! ->
+
 	//il va essaie de revoureille et il pourra pas car c'est le serveur qui a verroue avant lui
+
 	// le but c'est just qu'il va attendre le reponse du serveur
 
 	lpc_attendre_signal(mem);
@@ -190,14 +165,24 @@ int lpc_call(void *memory, const char *fun_name, ...)
 			break;
 		case 2:
 			*(double *)(mem->hd.address[i]) = *((double *)((char *)ptr + mem->hd.offsets[i]));
+		case 3: 
+				target_string = ((lpc_string *) (mem->hd.address[i]))->string;
+				origin_string = ((lpc_string *) ptr+mem->hd.offsets[i])->string;
+				memcpy(target_string, origin_string, mem->hd.length_arr[i]);	
 		}
 	}
 	va_end(arguments);
 	return 1;
 }
-lpc_string *lpc_make_string(const char *s, int taille)
-{
 
+
+int main(int argc, char *argv[]){
+
+	//client
+	lpc_memory *mem = lpc_open("/test");
+	
+	int a = 1;
+=======
 	lpc_string *lpc_s;
 
 	if (taille > 0 && s == NULL)
@@ -251,15 +236,9 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	//client
 	lpc_memory *mem = lpc_open("/shmo_name");
 	char shmo_name_Pid[20];
 
-	//int a = 1;
-	int b = 2;
-	//double c = 3;
-	double d = 4;
-	lpc_string *s = lpc_make_string("bonjour", 100);
 	lpc_string *s1 = lpc_make_string("hi1", 100);
 	char *function;
 	function = malloc(sizeof(char) * 20);
