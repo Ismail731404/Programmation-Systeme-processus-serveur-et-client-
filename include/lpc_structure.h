@@ -22,6 +22,7 @@ typedef struct {
         pthread_cond_t wcond;
         pid_t pid;              //nécessaire?
         unsigned char libre;
+        char shmo_name_Pid[NAMELEN];
 
         char fun_name[NAMELEN]; //const ? 
         int return_v;                   

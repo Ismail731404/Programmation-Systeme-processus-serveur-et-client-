@@ -11,6 +11,44 @@
 #include "libfonctionsclient.h"
 
 
+void couleur(int c)
+{
+        switch (c)
+        {
+        case 0:
+                printf("\033[30m");
+                break;
+        case 1:
+                printf("\033[31m");
+                break;
+        case 2:
+                printf("\033[32m");
+                break;
+        case 3:
+                printf("\033[33m");
+                break;
+        case 4:
+                printf("\033[34m");
+                break;
+        case 5:
+                printf("\033[35m");
+                break;
+        case 6:
+                printf("\033[36m");
+                break;
+        case 7:
+                printf("\033[37m");
+                break;
+        case 8:
+                printf("\033[00m");
+                break;
+        default:
+                printf("\n\tcouleur non répertoriée\n");
+        }
+}
+
+
+
 /* function that takes a name and a lpc_fun list 
 returns a function pointer to a function that takes void* and returns int
 -> finds server function corresponding to name */
@@ -24,17 +62,34 @@ int (*find_fun(char *name, lpc_function fun_list[20])) (void*){
         return NULL;
 }
 
+void lpc_lock_wait(lpc_memory *mem)
+{
+        //lock mutex
+        int code;
+        if ((code = pthread_mutex_lock(&mem->hd.mutex)) != 0)
+        {
+                printf("error: pthread_mutex_lock\n");
+        }
+        //wait for cond
+        while (mem->hd.libre)
+        {
+                couleur(7);
+                printf("waiting an client... \n");
+                if ((code = pthread_cond_wait(&mem->hd.wcond, &mem->hd.mutex)) != 0)
+                {
+                        printf("error: pthread_cond_wait\n");
+                }
+        }
+}
 
 
-int main(int argc, char *argv[]){
 
 
-	//create shared memory object
-        void *memory = init_memory("/test");
-        lpc_memory *mem = memory;	
+int main(int argc, char *argv[])
+{
 
         //array that contains all executable functions of the server
-        lpc_function function_list [20];   
+        lpc_function tab [20];   
 
         //add client functions
         lpc_function fun0 = {"add_int", &add_int};
@@ -45,68 +100,107 @@ int main(int argc, char *argv[]){
 
         lpc_function fun2 = {"modify_lpc_string", &modify_lpc_string};
         function_list[2] = fun2;
-
-
-
-        int code; 
         
-        //lock mutex
-        if((code = pthread_mutex_lock(&mem->hd.mutex)) != 0){
-                printf("error: pthread_mutex_lock\n");
-        }
-        printf("acquired mutex\n");
 
+        //create shared memory object
+        void *memory = init_memory("/shmo_name");
+        lpc_memory *MemorySimple = memory;
+        pid_t childpid[100];
 
-        //wait for cond       
-        while (mem->hd.libre){
-                printf("waiting ... \n");
-                if((code = pthread_cond_wait(&mem->hd.wcond, &mem->hd.mutex)) != 0){
-                        printf("error: pthread_cond_wait\n");
+        int code;
+        int jesuis = 0;
+
+        while (1)
+        {
+                couleur(7);
+                printf("\n++++++++++Pere: je suis dans le %d Tour+++++++++++\n", jesuis);
+                jesuis += 1;
+                lpc_lock_wait(MemorySimple);
+                couleur(7);
+                printf("Pere:client PID(%d) connected \n", MemorySimple->hd.pid);
+
+                char pid[50];
+                char name[50] = "/shmo_name";
+                sprintf(pid, "%d ", MemorySimple->hd.pid);
+                strcat(name, pid);
+                memcpy(MemorySimple->hd.shmo_name_Pid, name, sizeof(name));
+                MemorySimple->hd.libre = 1;
+                if ((childpid[jesuis - 1] = fork()) == 0)
+                {
+
+                        //create new shared memory object for child
+                        lpc_memory *memorychild = init_memory(name);
+                        couleur(jesuis + 1);
+                        printf("\tEnfant %d: New Memory communication named(%s)\n", jesuis, name);
+
+                        lpc_lock_wait(memorychild);
+                        memorychild->hd.libre = 1;
+                        couleur(jesuis + 1);
+                        printf("\tEnfant %d: Client PID(%d) connected \n", jesuis, memorychild->hd.pid);
+                        void *ptr = memorychild;
+                        ptr = (void *)((char *)memorychild + sizeof(header));
+                        couleur(jesuis + 1);
+                        printf("\tClient  PID(%d) a envoyer \n", memorychild->hd.pid);
+                        couleur(jesuis + 1);
+                        printf("\tle client veut appelle %s \n", memorychild->hd.fun_name);
+                        if (strcmp(memorychild->hd.fun_name, "incriment") == 0)
+                        {
+                                incrimente(memorychild);
+                        }
+                        for (int i = 0; i < 4; i++)
+                        {
+                                couleur(jesuis + 1);
+                                switch (memorychild->hd.types[i])
+                                {
+                                case 1:
+                                        printf("\t%d: %d\n", memorychild->hd.types[i], *((int *)((char *)ptr + memorychild->hd.offsets[i])));
+                                        *((int *)((char *)ptr + memorychild->hd.offsets[i])) += 1;
+                                        break;
+                                case 2:
+                                        printf("\t%d: %f\n", memorychild->hd.types[i], *((double *)((char *)ptr + memorychild->hd.offsets[i])));
+                                        *((double *)((char *)ptr + memorychild->hd.offsets[i])) += 1;
+                                        break;
+                                case 3:
+                                        printf("\t%d: %s\n", memorychild->hd.types[i], ((lpc_string *)((char *)ptr + memorychild->hd.offsets[i]))->string);
+                                        break;
+                                }
+                        }
+                        //unlock mutex
+                        couleur(jesuis + 1);
+                        printf("\tEnfant %d, Warn client PID(%d) his request Terminate \n", jesuis, memorychild->hd.pid);
+                        if ((code = pthread_mutex_unlock(&memorychild->hd.mutex)) != 0)
+                        {
+                                printf("error: pthread_mutex_unlock\n");
+                        }
+                        if ((code = pthread_cond_signal(&memorychild->hd.rcond)) != 0)
+                        {
+                                printf("error: pthread_cond_signal wcond\n");
+                        }
+
+                        lpc_close(memorychild);
+                        exit(0);
+                }
+
+                couleur(7);
+                //attende trois seconde pendant que l'enfant cree l'objet
+                sleep(3);
+                //Avertir au child la creation de nouveau shmmemroy
+                //unlock mutex
+                couleur(7);
+                printf("Pere: Warn client PID(%d) a New Memory Communication \n", MemorySimple->hd.pid);
+                if ((code = pthread_mutex_unlock(&MemorySimple->hd.mutex)) != 0)
+                {
+                        printf("error: pthread_mutex_unlock\n");
+                }
+
+                if ((code = pthread_cond_signal(&MemorySimple->hd.rcond)) != 0)
+                {
+                        printf("error: pthread_cond_signal wcond\n");
                 }
         }
-        printf("received notification from client\n");
 
+        lpc_close(MemorySimple);
+        src/server/lpc_server.c
 
-        void *ptr = memory;
-	ptr = (void *) ((char *) memory + sizeof(header));              //pointer to DATA segment of the shared memory
-
-        int result = find_fun(mem->hd.fun_name, function_list)(ptr);    //exectue function specified by client
-        mem->hd.return_v = result;
-
-
-        /* for testing purposes
-        for(int i=0;i<4;i++)
-	{
-		switch(mem->hd.types[i]){
-			case 1:
-                                printf("%d: %d\n", mem->hd.types[i], *((int *) ((char *) ptr+mem->hd.offsets[i])));
-                                *((int *) ((char *) ptr+mem->hd.offsets[i]))+=1;	
-				break;
-			case 2:
-                                 printf("%d: %f\n", mem->hd.types[i], *((double *) ((char *) ptr+mem->hd.offsets[i])));
-                                 *((double *) ((char *) ptr+mem->hd.offsets[i]))+=1;
-                                 break;
-			case 3: 
-                                 printf("%d: %s\n", mem->hd.types[i], ((lpc_string *) ((char *) ptr+mem->hd.offsets[i]))->string);
-                                 break;               
-
-		}
-	}
-        */
-
-        //unlock mutex
-        printf("acquired mutex and received signal\n");
-        if((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0){
-                printf("error: pthread_mutex_unlock\n");
-        }
-        printf("released mutex\n");
-
-        if((code = pthread_cond_signal(&mem->hd.rcond)) != 0){
-                printf("error: pthread_cond_signal wcond\n");
-        }
-        printf("notified client\n");
-        
-	lpc_close(mem);
-
-	return 0;
+        return 0;
 }
