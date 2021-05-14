@@ -25,8 +25,8 @@ typedef struct {
         char shmo_name_Pid[NAMELEN];
 
         char fun_name[NAMELEN]; //const ? 
-        int return_v;                   
-        int err;                        
+        int return_v;           // -1 ou 0               
+        int err;                // si return_v = =-1 -> récuperer err (errno)           
 
         int types[20];          //stores order and type of data in the shared memory
                                 //1:int, 2:Double, 3:lpc_string

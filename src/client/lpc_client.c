@@ -154,81 +154,44 @@ int lpc_call(void *memory, const char *fun_name, ...)
 	// le but c'est just qu'il va attendre le reponse du serveur
 
 	lpc_attendre_signal(mem);
-
-	//recuper les changement du serveur
-	for (int i = 0; i < count; i++)
-	{
-		switch (mem->hd.types[i])
-		{
-		case 1:
-			*(int *)(mem->hd.address[i]) = *((int *)((char *)ptr + mem->hd.offsets[i]));
-			break;
-		case 2:
-			*(double *)(mem->hd.address[i]) = *((double *)((char *)ptr + mem->hd.offsets[i]));
-		case 3: 
-				target_string = ((lpc_string *) (mem->hd.address[i]))->string;
-				origin_string = ((lpc_string *) ptr+mem->hd.offsets[i])->string;
-				memcpy(target_string, origin_string, mem->hd.length_arr[i]);	
-		}
-	}
-	va_end(arguments);
-	return 1;
-}
-
-
-int main(int argc, char *argv[]){
-
-	//client
-	lpc_memory *mem = lpc_open("/test");
 	
-	int a = 1;
-=======
-	lpc_string *lpc_s;
+	if(mem->hd.return_v != -1){
+		char *target_string;	//pointer to string given by client
+		char *origin_string;	//pointer to new string in shared memory, modified by serve
 
-	if (taille > 0 && s == NULL)
-	{
-		lpc_s = malloc(taille + sizeof(lpc_string));
-		if (lpc_s == NULL)
+		//recuper les changement du serveur
+		for (int i = 0; i < count; i++)
 		{
-			printf("lpc_make_string: malloc\n");
-			return NULL;
+			switch (mem->hd.types[i])
+			{
+			case 1:
+				*(int *)(mem->hd.address[i]) = *((int *)((char *)ptr + mem->hd.offsets[i]));
+				break;
+			case 2:
+				*(double *)(mem->hd.address[i]) = *((double *)((char *)ptr + mem->hd.offsets[i]));
+			case 3: 
+					target_string = ((lpc_string *) (mem->hd.address[i]))->string;
+					origin_string = ((lpc_string *) ptr+mem->hd.offsets[i])->string;
+					memcpy(target_string, origin_string, mem->hd.length_arr[i]);	
+			}
 		}
-		lpc_s->slen = taille;
-		memset(lpc_s->string, '0', taille);
+		va_end(arguments);
+		return 1;
+	}else{
+		int err = mem->hd.err;
+		printf("fonctione échouché, valeur de errno: %d\n", err);
+		va_end(arguments);
+		return err;
 	}
-	else if (taille <= 0 && s != NULL)
-	{
-		size_t lo = strlen(s) + 1;
-		lpc_s = malloc(lo + sizeof(lpc_string));
-		if (lpc_s == NULL)
-		{
-			printf("lpc_make_string: malloc\n");
-			return NULL;
-		}
-		lpc_s->slen = lo;
-		strcpy(lpc_s->string, s);
-	}
-	else if (taille >= strlen(s) + 1)
-	{
-		lpc_s = malloc(taille + sizeof(lpc_string));
-		if (lpc_s == NULL)
-		{
-			printf("lpc_make_string: malloc\n");
-			return NULL;
-		}
-		lpc_s->slen = taille;
-		strcpy(lpc_s->string, s);
-	}
-	else
-	{
-		return NULL;
-	}
-
-	return lpc_s;
 }
+
 
 int main(int argc, char *argv[])
 {
+
+	int a = 2;
+	int b = 5;
+
 
 	if (argc != 2)
 	{
@@ -273,9 +236,10 @@ int main(int argc, char *argv[])
 
 	memchild->hd.pid = getpid();
 
-	lpc_call(memchild, (const char *)function, INT, &b, DOUBLE, &d, NOP);
-	printf("La valeur de b est modife par le server b=%d\n", b);
-	printf("La valeur de d est modife par le server d=%f\n", d);
+	if(lpc_call(memchild, (const char *)function, INT, &a, INT, &b, NOP) == 1){
+		printf("La valeur de b est modife par le server a=%d\n", a);
+	}
+	
 	//clode les memoire projecter
 	lpc_close(mem);
 	lpc_close(memchild);

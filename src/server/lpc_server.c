@@ -56,6 +56,7 @@ returns a function pointer to a function that takes void* and returns int
 int (*find_fun(char *name, lpc_function fun_list[20])) (void*){
         for(int i=0; i<20; i++){
                 if(strcmp(name, fun_list[i].fun_name) == 0){
+
                         return fun_list[i].fun;
                 }
         }
@@ -89,7 +90,7 @@ int main(int argc, char *argv[])
 {
 
         //array that contains all executable functions of the server
-        lpc_function tab [20];   
+        lpc_function function_list [20];   
 
         //add client functions
         lpc_function fun0 = {"add_int", &add_int};
@@ -143,28 +144,19 @@ int main(int argc, char *argv[])
                         printf("\tClient  PID(%d) a envoyer \n", memorychild->hd.pid);
                         couleur(jesuis + 1);
                         printf("\tle client veut appelle %s \n", memorychild->hd.fun_name);
-                        if (strcmp(memorychild->hd.fun_name, "incriment") == 0)
-                        {
-                                incrimente(memorychild);
-                        }
-                        for (int i = 0; i < 4; i++)
-                        {
-                                couleur(jesuis + 1);
-                                switch (memorychild->hd.types[i])
-                                {
-                                case 1:
-                                        printf("\t%d: %d\n", memorychild->hd.types[i], *((int *)((char *)ptr + memorychild->hd.offsets[i])));
-                                        *((int *)((char *)ptr + memorychild->hd.offsets[i])) += 1;
-                                        break;
-                                case 2:
-                                        printf("\t%d: %f\n", memorychild->hd.types[i], *((double *)((char *)ptr + memorychild->hd.offsets[i])));
-                                        *((double *)((char *)ptr + memorychild->hd.offsets[i])) += 1;
-                                        break;
-                                case 3:
-                                        printf("\t%d: %s\n", memorychild->hd.types[i], ((lpc_string *)((char *)ptr + memorychild->hd.offsets[i]))->string);
-                                        break;
-                                }
-                        }
+                       
+                        int (*result_fun)(void*) = find_fun(memorychild->hd.fun_name, function_list);
+                        
+                        if((result_fun != NULL)){
+                                int resultat = (result_fun)(ptr);
+                                memorychild->hd.return_v = resultat;
+
+                        }else{
+                                memorychild->hd.return_v = -1;
+                                memorychild->hd.err = ENOENT;
+                                printf("\tfonctions %s n'existe pas\n", memorychild->hd.fun_name);
+                        } 
+                        
                         //unlock mutex
                         couleur(jesuis + 1);
                         printf("\tEnfant %d, Warn client PID(%d) his request Terminate \n", jesuis, memorychild->hd.pid);
@@ -200,7 +192,6 @@ int main(int argc, char *argv[])
         }
 
         lpc_close(MemorySimple);
-        src/server/lpc_server.c
 
         return 0;
 }
