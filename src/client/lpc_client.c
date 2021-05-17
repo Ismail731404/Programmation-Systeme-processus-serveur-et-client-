@@ -181,7 +181,7 @@ int lpc_call(void *memory, const char *fun_name, ...)
 		return 1;
 	}else{
 		errno = mem->hd.err;
-		printf("fonctione échouché, valeur de errno: %d\n", errno);
+		printf("fonctione échouché, valeur de errno: %s\n", strerror(errno));
 		va_end(arguments);
 		return -1;
 	}

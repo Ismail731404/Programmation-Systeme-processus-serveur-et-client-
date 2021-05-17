@@ -154,9 +154,10 @@ int main(int argc, char *argv[])
                                 int resultat = (result_fun)(ptr);
                                 if(resultat == 0)
                                         memorychild->hd.return_v = resultat;
-                                else
+                                else{
+                                        memorychild->hd.return_v = -1;
                                         memorychild->hd.err = resultat;        
-
+                                }
                         }else{
                                 memorychild->hd.return_v = -1;
                                 memorychild->hd.err = ENOENT;
