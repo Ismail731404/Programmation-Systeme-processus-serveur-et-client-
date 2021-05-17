@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "add_int.h"
 
 int add_int(void *data){
@@ -12,7 +13,7 @@ int add_int(void *data){
 	
 	int result = *a + *b;
 	memcpy(data, &result, sizeof(int));
-	sleep(15);
+	//sleep(15);
 	return 0;
 }
 

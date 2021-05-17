@@ -29,7 +29,7 @@ void *lpc_open(const char *name){
 
 int lpc_close(void *mem){
 
-	int result = munmap(mem, 1024);
+	int result = munmap(mem, sizeof(lpc_memory)+100);
 	
 	return result;
 }

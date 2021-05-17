@@ -28,13 +28,13 @@ typedef struct {
         int return_v;           // -1 ou 0               
         int err;                // si return_v = =-1 -> récuperer err (errno)           
 
-        int types[20];          //stores order and type of data in the shared memory
+        int types[50];          //stores order and type of data in the shared memory
                                 //1:int, 2:Double, 3:lpc_string
-        int length_arr[20];     //stores the length in bytes of each entry
+        int length_arr[50];     //stores the length in bytes of each entry
                                 //example: [sizeof(int), sizeof(double), sizeof(lpc_string)+slen, ...]
-        int offsets[20];        //decalage des different donne
+        int offsets[50];        //decalage des different donne
         
-        void *address[20];      // stocke les addresse des donnes envoyer par le client
+        void *address[50];      // stocke les addresse des donnes envoyer par le client
                                 //pour mettre a jour une fois le client fini son travailler
 
 } header;

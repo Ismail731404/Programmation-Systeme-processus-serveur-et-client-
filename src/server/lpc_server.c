@@ -101,6 +101,9 @@ int main(int argc, char *argv[])
 
         lpc_function fun2 = {"modify_lpc_string", &modify_lpc_string};
         function_list[2] = fun2;
+
+        lpc_function fun3 = {"modify_wrong_lpc_string", &modify_wrong_lpc_string};
+        function_list[3] = fun3;
         
 
         //create shared memory object
@@ -149,7 +152,10 @@ int main(int argc, char *argv[])
                         
                         if((result_fun != NULL)){
                                 int resultat = (result_fun)(ptr);
-                                memorychild->hd.return_v = resultat;
+                                if(resultat == 0)
+                                        memorychild->hd.return_v = resultat;
+                                else
+                                        memorychild->hd.err = resultat;        
 
                         }else{
                                 memorychild->hd.return_v = -1;

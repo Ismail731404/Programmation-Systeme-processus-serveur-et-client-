@@ -30,7 +30,7 @@ void *init_memory(const char *mem_objet)
 
   /* projection de shared memory object dans
    * la mémoire                              */
-  lpc_memory *mem = mmap(NULL, sizeof(lpc_memory), PROT_READ | PROT_WRITE,
+  lpc_memory *mem = mmap(NULL, sizeof(lpc_memory)+100, PROT_READ | PROT_WRITE,
                      MAP_SHARED, fd, 0);
   if ((void *)mem == MAP_FAILED)
     PANIC_EXIT("mmap");

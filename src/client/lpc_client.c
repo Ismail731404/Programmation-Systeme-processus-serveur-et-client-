@@ -155,9 +155,9 @@ int lpc_call(void *memory, const char *fun_name, ...)
 
 	lpc_attendre_signal(mem);
 	
-	if(mem->hd.return_v != -1){
-		char *target_string;	//pointer to string given by client
-		char *origin_string;	//pointer to new string in shared memory, modified by serve
+	if(mem->hd.return_v == 0){
+		lpc_string *client_lpc_string;	//pointer to lpc_string given by client
+		lpc_string *server_lpc_string;	//pointer to lpc_new string in shared memory, modified by server
 
 		//recuper les changement du serveur
 		for (int i = 0; i < count; i++)
@@ -170,18 +170,20 @@ int lpc_call(void *memory, const char *fun_name, ...)
 			case 2:
 				*(double *)(mem->hd.address[i]) = *((double *)((char *)ptr + mem->hd.offsets[i]));
 			case 3: 
-					target_string = ((lpc_string *) (mem->hd.address[i]))->string;
-					origin_string = ((lpc_string *) ptr+mem->hd.offsets[i])->string;
-					memcpy(target_string, origin_string, mem->hd.length_arr[i]);	
+				client_lpc_string = ((lpc_string *) (mem->hd.address[i]));
+				server_lpc_string = ((lpc_string *) ((char *)ptr+mem->hd.offsets[i]));
+		
+				memcpy(client_lpc_string->string, server_lpc_string->string, mem->hd.length_arr[i]);
+				memcpy(&client_lpc_string->slen, &server_lpc_string->slen,sizeof(int));
 			}
 		}
 		va_end(arguments);
 		return 1;
 	}else{
-		int err = mem->hd.err;
-		printf("fonctione échouché, valeur de errno: %d\n", err);
+		errno = mem->hd.err;
+		printf("fonctione échouché, valeur de errno: %d\n", errno);
 		va_end(arguments);
-		return err;
+		return -1;
 	}
 }
 
@@ -189,23 +191,26 @@ int lpc_call(void *memory, const char *fun_name, ...)
 int main(int argc, char *argv[])
 {
 
-	int a = 2;
-	int b = 5;
-
-
 	if (argc != 2)
 	{
 		fprintf(stderr, "usage : %s shared_memory_object\n", argv[0]);
 		exit(1);
 	}
 
-	lpc_memory *mem = lpc_open("/shmo_name");
-	char shmo_name_Pid[20];
+	int a = 2;
+	int b = 5;
+	lpc_string *s1 = lpc_make_string("not modified 1", 100);
+	lpc_string *s2 = lpc_make_string("not modified 2", 50);
 
-	lpc_string *s1 = lpc_make_string("hi1", 100);
-	char *function;
-	function = malloc(sizeof(char) * 20);
+
+
+	lpc_memory *mem = lpc_open("/shmo_name");
+	char shmo_name_Pid[40];
+
+	
+	char function [50];
 	memcpy(function, argv[1], strlen(argv[1]));
+
 
 	//Avertir au serveur vouloir appeller une fonction
 	int code;
@@ -225,6 +230,7 @@ int main(int argc, char *argv[])
 	{
 		printf("error: pthread_cond_signal wcond\n");
 	}
+
 	printf("Client: Request Communication for Server \n");
 	//Attendre la reponse du server
 	lpc_attendre_signal(mem);
@@ -236,8 +242,13 @@ int main(int argc, char *argv[])
 
 	memchild->hd.pid = getpid();
 
-	if(lpc_call(memchild, (const char *)function, INT, &a, INT, &b, NOP) == 1){
-		printf("La valeur de b est modife par le server a=%d\n", a);
+	if(lpc_call(memchild, (const char *)function, STRING, s1, STRING, s2, NOP) == 1){
+		printf("La valeur de s1 est modife par le server: %s\n", s1->string);
+		printf("La valeur de s2 est modife par le server: %s\n", s2->string);
+		if(s2->slen == 0){
+			printf("s2 not modified, buffer not big enough\n");
+			printf("value of errno %s\n", strerror(errno));
+		}
 	}
 	
 	//clode les memoire projecter
