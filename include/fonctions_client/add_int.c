@@ -1,10 +1,12 @@
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
+#include "../../include/lpc_utility.h"
+#include "../../include/lpc_structure.h"
+#include "../../include/lpc_functions/lpc_functions.h"
 #include "add_int.h"
 
-int add_int(void *data){
+int add_int(void *memory){
+
+	void *data = (void *)((char *)memory + sizeof(header));
+
 	int *a = malloc(sizeof(int));
 	int *b = malloc(sizeof(int));
 

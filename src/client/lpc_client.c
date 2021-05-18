@@ -224,7 +224,7 @@ int NumeroFonction(char *function)
 		choixMenu = 3;
 	else if (strcmp(function, "print_lpc_string") == 0)
 		choixMenu = 4;
-	else if (strcmp(function, "concat_chaine") == 0)
+	else if (strcmp(function, "concat_argument") == 0)
 		choixMenu = 5;
 	else if (strcmp(function, "modify_all") == 0)
 		choixMenu = 6;	
@@ -312,7 +312,16 @@ int main(int argc, char **argv)
 		lpc_call(memchild, (const char *)function, STRING, s, NOP);
 		break;
 	case 5:
-		printf("\nClinet veut appelle Fonction concat deux chaine \n");
+		printf("\nClinet veut appelle Fonction concat les arguments \n");
+
+		lpc_string *s50 = lpc_make_string("chaine1", 100);
+		lpc_string *s51 = lpc_make_string("chaine2", 50);
+		int s52=400;
+		double s53=5.1;
+		if (lpc_call(memchild, (const char *)function, STRING, s50, INT, &s52, STRING, s51,DOUBLE,&s53, NOP) == 1)
+		{
+			 printf("Concat de tous les arguments : %s\n",s50->string);
+		}
 		break;
 	case 6:
 		printf("\nClient veut appeller Fonction modify_all\n");

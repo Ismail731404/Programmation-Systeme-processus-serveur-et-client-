@@ -3,8 +3,8 @@
 #include "../../include/lpc_functions/lpc_functions.h"
 #include "modify_lpc_string.h"
 
-int modify_lpc_string (void *data){
-
+int modify_lpc_string (void *memory){
+    void *data = (void *)((char *)memory + sizeof(header));
     lpc_string *shm = data;	
     int error = 0;
     char mod[20]="chaine modifee";

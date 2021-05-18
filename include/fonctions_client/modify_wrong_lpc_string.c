@@ -3,8 +3,8 @@
 #include "../../include/lpc_functions/lpc_functions.h"
 #include "modify_wrong_lpc_string.h"
 
-int modify_wrong_lpc_string (void *data){
-
+int modify_wrong_lpc_string (void *memory){
+    void *data = (void *)((char *)memory + sizeof(header));
     int error = 0;
     int len = 0;
     lpc_string *s1 = data;	

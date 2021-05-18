@@ -8,9 +8,9 @@ functions takes a lpc_string, int and double
 and modifies all of them 
 */
 
-int modify_all (void *data){
+int modify_all (void *memory){
 
-
+    void *data = (void *)((char *)memory + sizeof(header));
     void *ptr;
     int error = 0;
     errno = 0;

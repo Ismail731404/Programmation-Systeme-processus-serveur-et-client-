@@ -104,9 +104,12 @@ int main(int argc, char *argv[])
 
         lpc_function fun3 = {"modify_wrong_lpc_string", &modify_wrong_lpc_string};
         function_list[3] = fun3;
-        
-        lpc_function fun4 = {"modify_all", &modify_all};
+
+        lpc_function fun4 = {"concat_argument", &concat_argument };
         function_list[4] = fun4;
+        
+        lpc_function fun5 = {"modify_all", &modify_all};
+        function_list[5] = fun5;
 
         //create shared memory object
         void *memory = init_memory("/shmo_name");
@@ -144,7 +147,7 @@ int main(int argc, char *argv[])
                         couleur(jesuis + 1);
                         printf("\tEnfant %d: Client PID(%d) connected \n", jesuis, memorychild->hd.pid);
                         void *ptr = memorychild;
-                        ptr = (void *)((char *)memorychild + sizeof(header));
+                        //ptr = (void *)((char *)memorychild + sizeof(header));
                         couleur(jesuis + 1);
                         printf("\tClient  PID(%d) a envoyer \n", memorychild->hd.pid);
                         couleur(jesuis + 1);
