@@ -6,10 +6,16 @@
 int modify_lpc_string (void *data){
 
     lpc_string *shm = data;	
-    char *s = malloc(shm->slen);
-    strcpy(s, "salut");
-    memcpy(shm->string, s, shm->slen);
-    free(s);
-    sleep(15);
-    return 0;
+    int error = 0;
+    char mod[20]="chaine modifee";
+    if(strlen(mod)<= shm->slen){
+        memcpy(shm->string, mod, shm->slen);
+        sleep(15);
+        return 0;
+    }
+    else
+    {
+        memcpy(&shm->slen, &error, sizeof(int));
+        return ENOMEM;
+    }
 }	

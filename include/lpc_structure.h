@@ -11,8 +11,8 @@ typedef struct{
 
 
 typedef struct {
-        int slen;
-        char string[];
+        int slen;               //toujours 4 byte
+        char string[];          //toujours 0 byte
 } lpc_string;
 
 

@@ -14,6 +14,7 @@ int modify_wrong_lpc_string (void *data){
     len = strlen(message1);
 
     if(len > s1->slen){
+        errno = ENOMEM;
         memcpy(&s1->slen, &error, sizeof(int));
     }else{
         memcpy(s1->string, message1, s1->slen);
@@ -30,10 +31,10 @@ int modify_wrong_lpc_string (void *data){
     strcpy(message2, "too long");
     len = strlen(message2);
 
-    errno = ENOMEM;
-
     //string too long to fit into lpc_string given by client
+    //usally (len > s2->slen), forced error
     if(1000 > s2->slen){
+        errno = ENOMEM;
         memcpy(&s2->slen, &error, sizeof(int));
     }else{
         memcpy(s2->string, message2, s2->slen);

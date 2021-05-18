@@ -30,40 +30,43 @@ void lpc_attendre_signal(lpc_memory *mem)
 	}
 }
 
-int lpc_call(void *memory, const char *fun_name, ...)
-{
+int lpc_call(void *memory, const char *fun_name, ...){
+	
 
 	printf("clinet : je vais envoyer cette fonction %s\n", fun_name);
-	va_list arguments;
+	va_list arguments;				//va_list: list of arguments of variable length
 	va_start(arguments, fun_name);
 
-	lpc_type fst_param;
+	lpc_type fst_param;				//type argument, first(pair): STRING, INT, DOUBLE
 
-	lpc_string *string_param;
+	//value arguments, second(pair)
+	lpc_string *string_param;			
 	double *double_param;
 	int *int_param;
 
 	void *ptr = memory;
-	ptr = (void *)((char *)memory + sizeof(header));
+	ptr = (void *)((char *)memory + sizeof(header));		//pointer to data segment of shared memory
 
-	/* cast to char* necessary to move pointer, then back to void*   */
+	/* cast to char* necessary to move pointer, then back to void*  */
 
-	int offset = 0; //offset to start of data segment in each iteration
+	int offset = 0; 			//offset to start of data segment in each iteration
 
-	int type; //type of data entry
-	int size; //length in bytes of data entry
+	int type; 					//type of data entry
+	int size; 					//length in bytes of data entry
 
-	int nop = 1;   //end of function parameters
-	int count = 0; //counter of data entries
+	int nop = 1;   				//end of function parameters
+	int count = 0; 				//counter of data entries
 
 	int code;
-	lpc_memory *mem = (lpc_memory *)memory;
+	lpc_memory *mem = (lpc_memory *) memory;
 
 	if ((code = pthread_mutex_lock(&mem->hd.mutex)) != 0)
 	{
 		printf("error: pthread_mutex_lock\n");
 	}
-	memcpy(mem->hd.fun_name, fun_name, strlen(fun_name));
+
+	memcpy(mem->hd.fun_name, fun_name, strlen(fun_name));		//put function name into shared mem.
+
 	while (nop != 0)
 	{
 
@@ -82,7 +85,7 @@ int lpc_call(void *memory, const char *fun_name, ...)
 		{
 		case STRING:
 			string_param = (lpc_string *)va_arg(arguments, lpc_string *);
-			type = 3; // 3: lpc_string
+			type = 3; 												// 3: lpc_string
 			size = sizeof(lpc_string) + string_param->slen;
 
 			memcpy((char *)ptr + offset, string_param, size);
@@ -96,7 +99,7 @@ int lpc_call(void *memory, const char *fun_name, ...)
 
 		case DOUBLE:
 			double_param = (double *)va_arg(arguments, double *);
-			type = 2; //2: double
+			type = 2; 												//2: double
 			size = sizeof(double);
 
 			memcpy(((char *)ptr + offset), double_param, size);
@@ -110,7 +113,7 @@ int lpc_call(void *memory, const char *fun_name, ...)
 
 		case INT:
 			int_param = (int *)va_arg(arguments, int *);
-			type = 1; //1: int
+			type = 1; 												//1: int
 			size = sizeof(int);
 
 			memcpy(((char *)ptr + offset), int_param, size);
@@ -131,7 +134,7 @@ int lpc_call(void *memory, const char *fun_name, ...)
 			return -1;
 		}
 	}
-	//make condition come true
+	//set wait condition for server to true
 	mem->hd.libre = 0;
 	printf("Client: Request processing for a server child\n");
 	if ((code = pthread_mutex_unlock(&mem->hd.mutex)) != 0)
@@ -144,49 +147,42 @@ int lpc_call(void *memory, const char *fun_name, ...)
 		printf("error: pthread_cond_signal wcond\n");
 	}
 
-	//not yet perfect, needs rework!!
-	//!!
-	//!! ->
-
-	//il va essaie de revoureille et il pourra pas car c'est le serveur qui a verroue avant lui
-
+	// il va essaie de revoureille et il pourra pas car c'est le serveur qui a verroue avant lui
 	// le but c'est just qu'il va attendre le reponse du serveur
 
 	lpc_attendre_signal(mem);
 
-	if (mem->hd.return_v == 0)
-	{
-		lpc_string *client_lpc_string; //pointer to lpc_string given by client
-		lpc_string *server_lpc_string; //pointer to lpc_new string in shared memory, modified by server
+	lpc_string *client_lpc_string;	//pointer to lpc_string given by client
+	lpc_string *server_lpc_string;	//pointer to new lpc_string in shared memory, modified by server
 
-		//recuper les changement du serveur
-		for (int i = 0; i < count; i++)
+	//recuper les changement du serveur
+	for (int i = 0; i < count; i++)
+	{
+		switch (mem->hd.types[i])
 		{
-			switch (mem->hd.types[i])
-			{
-			case 1:
-				*(int *)(mem->hd.address[i]) = *((int *)((char *)ptr + mem->hd.offsets[i]));
-				break;
-			case 2:
-				*(double *)(mem->hd.address[i]) = *((double *)((char *)ptr + mem->hd.offsets[i]));
-			case 3:
-				client_lpc_string = ((lpc_string *)(mem->hd.address[i]));
-				server_lpc_string = ((lpc_string *)((char *)ptr + mem->hd.offsets[i]));
-
-				memcpy(client_lpc_string->string, server_lpc_string->string, mem->hd.length_arr[i]);
-				memcpy(&client_lpc_string->slen, &server_lpc_string->slen, sizeof(int));
-			}
+		case 1:
+			*(int *)(mem->hd.address[i]) = *((int *)((char *)ptr + mem->hd.offsets[i]));
+			break;
+		case 2:
+			*(double *)(mem->hd.address[i]) = *((double *)((char *)ptr + mem->hd.offsets[i]));
+		case 3: 
+			client_lpc_string = ((lpc_string *) (mem->hd.address[i]));				//pointer to original variable of the client
+			server_lpc_string = ((lpc_string *) ((char *)ptr+mem->hd.offsets[i]));	//modified variable in shared memory
+		
+			memcpy(client_lpc_string->string, server_lpc_string->string, mem->hd.length_arr[i]);
+			memcpy(&client_lpc_string->slen, &server_lpc_string->slen,sizeof(int));
 		}
-		va_end(arguments);
-		return 1;
 	}
-	else
-	{
-		errno = mem->hd.err;
-		printf("fonctione échouché, valeur de errno: %s\n", strerror(errno));
-		va_end(arguments);
+
+	va_end(arguments);
+
+	//set own errno to errno given by the server
+	errno = mem->hd.err;
+	printf("%s\n", strerror(errno));
+	if (errno != 0)
 		return -1;
-	}
+
+	return 1;
 }
 
 void PremierConnexion(lpc_memory *mem)
@@ -262,8 +258,8 @@ int main(int argc, char **argv)
 	case 1:
 		printf("\nClinet veut appelle Fonction add_int\n");
 		int a, b, c;
-		a =2;
-		c=a;
+		a = 2;
+		c = a;
 		b = 5;
 
 		if (lpc_call(memchild, (const char *)function, INT, &a, INT, &b, NOP) == 1)
@@ -273,31 +269,52 @@ int main(int argc, char **argv)
 	case 2:
 		printf("\nClinet veut appelle Fonction modify_lpc_string\n");
 
-		lpc_string *s1 = lpc_make_string("not modified 1", 100);
+		lpc_string *s1 = lpc_make_string("not", 100);
 		lpc_string *s2 = lpc_make_string("not modified 2", 50);
 		if (lpc_call(memchild, (const char *)function, STRING, s1, STRING, s2, NOP) == 1)
 		{
 			printf("La valeur de s1 est modife par le server: %s\n", s1->string);
 			printf("La valeur de s2 est modife par le server: %s\n", s2->string);
-			if (s2->slen == 0)
+		}
+		break;
+	case 3:
+		printf("\nClinet veut appelle Fonction modify_wrong_lpc_string\n");
+		lpc_string *s3; 
+		if((s3 = lpc_make_string("not modified 1", 3)) == NULL){
+			return 0;
+		}
+
+		lpc_string *s4;
+		if((s4 = lpc_make_string("not modified 2", 100)) == NULL){
+			return 0;
+		}
+
+		if ((lpc_call(memchild, (const char *)function, STRING, s3, STRING, s4, NOP)) == 1)
+		{
+			printf("La valeur de s1 est modife par le server: %s\n", s3->string);
+			printf("La valeur de s2 est modife par le server: %s\n", s4->string);
+		}else{
+			if (s4->slen == 0)
 			{
 				printf("s2 not modified, buffer not big enough\n");
 				printf("value of errno %s\n", strerror(errno));
 			}
 		}
 		break;
-	case 3:
-		printf("\nClinet veut appelle Fonction modify_wrong_lpc_string\n");
-		break;
 	case 4:
-		printf("\nClinet veut appelle Fonction printf_lpc_string\n");
+		printf("\nClient veut appeller Fonction print_lpc_string\n");
+		lpc_string *s; 
+		if((s = lpc_make_string("Salut!", 20)) == NULL){
+			return 0;
+		}
+		lpc_call(memchild, (const char *)function, STRING, s, NOP);
 		break;
 	case 5:
 		printf("\nClinet veut appelle Fonction concat deux chaine \n");
 		break;
 	default:
 		printf("\nClient: fonction n'exsite pas\n");
-		lpc_call(memchild, (const char *)function);
+		lpc_call(memchild, (const char *)function, NOP);
 		break;
 	}
 

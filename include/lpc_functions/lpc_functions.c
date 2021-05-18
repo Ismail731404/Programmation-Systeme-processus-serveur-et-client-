@@ -69,7 +69,6 @@ lpc_string *lpc_make_string(const char *s, int taille){
 
 	}else{
 		return NULL;
-
 	}
 
 	return lpc_s;
