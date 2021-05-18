@@ -226,6 +226,8 @@ int NumeroFonction(char *function)
 		choixMenu = 4;
 	else if (strcmp(function, "concat_chaine") == 0)
 		choixMenu = 5;
+	else if (strcmp(function, "modify_all") == 0)
+		choixMenu = 6;	
 
 	return choixMenu;
 }
@@ -312,6 +314,22 @@ int main(int argc, char **argv)
 	case 5:
 		printf("\nClinet veut appelle Fonction concat deux chaine \n");
 		break;
+	case 6:
+		printf("\nClient veut appeller Fonction modify_all\n");
+		lpc_string *new_s; 
+		if((new_s = lpc_make_string("pas modifiée!", 20)) == NULL){
+			printf("buffer for lpc_string too short\n");
+			return 0;
+		}
+		int solution = 24;
+		double e = 3.14;
+		if((lpc_call(memchild, (const char *)function, STRING, new_s, INT, &solution, DOUBLE, &e, NOP)) != 1){
+			printf("%s\n", strerror(errno));
+		}
+		printf("La valeur de new_s est modife par le server: %s\n", new_s->string);
+		printf("La valeur de solution est modife par le server: %d\n", solution);
+		printf("La valeur de e est modife par le server: %f\n", e);
+		break;	
 	default:
 		printf("\nClient: fonction n'exsite pas\n");
 		lpc_call(memchild, (const char *)function, NOP);

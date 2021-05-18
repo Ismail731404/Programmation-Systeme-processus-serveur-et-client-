@@ -10,6 +10,8 @@ all : $(EXEC1) $(EXEC2)
 
 $(warning default goal is $(.DEFAULT_GOAL))
 
+build/modify_all.o : include/fonctions_client/modify_all.c  include/fonctions_client/modify_all.h
+	$(CC) $(CFLAGS)  -o $@ -c $< $(LDLIBS)
 
 build/modify_wrong_lpc_string.o : include/fonctions_client/modify_wrong_lpc_string.c  include/fonctions_client/modify_wrong_lpc_string.h
 	$(CC) $(CFLAGS)  -o $@ -c $< $(LDLIBS)
@@ -23,8 +25,8 @@ build/add_int.o : include/fonctions_client/add_int.c  include/fonctions_client/a
 build/print_lpc_string.o : include/fonctions_client/print_lpc_string.c  include/fonctions_client/print_lpc_string.h
 	$(CC) $(CFLAGS)  -o $@ -c $< $(LDLIBS)
 
-build/libfonctionsclient.a : build/add_int.o build/print_lpc_string.o build/modify_lpc_string.o build/modify_wrong_lpc_string.o
-	ar rcu build/libfonctionsclient.a build/add_int.o build/print_lpc_string.o build/modify_lpc_string.o build/modify_wrong_lpc_string.o
+build/libfonctionsclient.a : build/add_int.o build/print_lpc_string.o build/modify_lpc_string.o build/modify_wrong_lpc_string.o build/modify_all.o
+	ar rcu build/libfonctionsclient.a build/add_int.o build/print_lpc_string.o build/modify_lpc_string.o build/modify_wrong_lpc_string.o build/modify_all.o
 	ranlib build/libfonctionsclient.a
 
 
