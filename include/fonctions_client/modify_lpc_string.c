@@ -6,11 +6,10 @@
 int modify_lpc_string (void *data){
 
     lpc_string *shm = data;	
-    
     char *s = malloc(shm->slen);
     strcpy(s, "salut");
     memcpy(shm->string, s, shm->slen);
-
     free(s);
+    sleep(15);
     return 0;
 }	
